@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YOLOv8 Video Object Detector</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 2rem; }
+  h1 { color: #333; }
+  #results { margin-top: 1rem; }
+  #video-download { margin-top: 1rem; }
+</style>
+</head>
+<body>
+<h1>YOLOv8 Video Object Detector</h1>
+<p>Upload an MP4 video (max 50MB). Detects people & animals.</p>
+
+<form id="upload-form">
+  <input type="file" id="video-file" accept="video/mp4" required />
+  <button type="submit">Upload & Process</button>
+</form>
+
+<div id="results"></div>
+<div id="video-download"></div>
+
+<script>
+  const form = document.getElementById('upload-form');
+  const resultsDiv = document.getElementById('results');
+  const downloadDiv = document.getElementById('video-download');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resultsDiv.textContent = 'Processing video... Please wait.';
+    downloadDiv.innerHTML = '';
+
+    const fileInput = document.getElementById('video-file');
+    if (fileInput.files.length === 0) {
+      resultsDiv.textContent = 'Please select a video file.';
+      return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > 50 * 1024 * 1024) {
+      resultsDiv.textContent = 'File size exceeds 50MB limit.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/upload-video/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        resultsDiv.textContent = 'Error: ' + err.detail;
+        return;
+      }
+
+      const data = await response.json();
+      resultsDiv.innerHTML = '<h3>Detected Objects:</h3>';
+
+      if (Object.keys(data.detected_objects).length === 0) {
+        resultsDiv.innerHTML += '<p>No people or animals detected.</p>';
+      } else {
+        const list = document.createElement('ul');
+        for (const [cls, count] of Object.entries(data.detected_objects)) {
+          const item = document.createElement('li');
+          item.textContent = `${cls}: ${count}`;
+          list.appendChild(item);
+        }
+        resultsDiv.appendChild(list);
+      }
+
+      const link = document.createElement('a');
+      link.href = data.annotated_video_url;
+      link.textContent = 'Download annotated video';
+      link.download = 'annotated_video.mp4';
+      downloadDiv.appendChild(link);
+    } catch (err) {
+      resultsDiv.textContent = 'Unexpected error: ' + err.message;
+    }
+  });
+</script>
+</body>
+</html>
