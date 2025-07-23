@@ -3,3 +3,4 @@ uvicorn[standard]
 ultralytics
 opencv-python-headless
 gunicorn
+python-multipart
